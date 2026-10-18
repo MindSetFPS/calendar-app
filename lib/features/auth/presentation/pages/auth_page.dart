@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:calendar/core/routing/app_routes.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_event.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_state.dart';
@@ -55,14 +56,7 @@ class _AuthPageState extends State<AuthPage> {
           next.status == AuthStatus.success &&
           previous.status != AuthStatus.success,
       listener: (context, state) {
-        final verb =
-            state.mode == AuthMode.signUp ? 'Account created' : 'Signed in';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$verb as ${state.user?.name ?? _email} (mockup)'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
       },
       builder: (context, state) {
         final isSignUp = state.mode == AuthMode.signUp;

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:calendar/core/di/injection.dart';
+import 'package:calendar/core/routing/app_routes.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:calendar/features/auth/presentation/pages/auth_page.dart';
+import 'package:calendar/features/calendar/presentation/bloc/calendar_bloc.dart';
+import 'package:calendar/features/calendar/presentation/pages/calendar_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +30,12 @@ class MainApp extends StatelessWidget {
         create: (_) => getIt<AuthBloc>(),
         child: const AuthPage(),
       ),
+      routes: {
+        AppRoutes.home: (_) => BlocProvider<CalendarBloc>(
+              create: (_) => getIt<CalendarBloc>(),
+              child: const CalendarPage(),
+            ),
+      },
     );
   }
 }

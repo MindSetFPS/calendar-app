@@ -6,6 +6,11 @@ import 'package:calendar/features/auth/domain/repositories/auth_repository.dart'
 import 'package:calendar/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:calendar/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:calendar/features/calendar/data/datasources/calendar_local_data_source.dart';
+import 'package:calendar/features/calendar/data/repositories/calendar_repository_impl.dart';
+import 'package:calendar/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:calendar/features/calendar/domain/usecases/get_events_usecase.dart';
+import 'package:calendar/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:calendar/features/user/data/datasources/user_local_data_source.dart';
 import 'package:calendar/features/user/data/repositories/user_repository_impl.dart';
 import 'package:calendar/features/user/domain/repositories/user_repository.dart';
@@ -17,12 +22,20 @@ Future<void> configureDependencies() async {
   getIt
     ..registerLazySingleton<UserLocalDataSource>(UserLocalDataSource.new)
     ..registerLazySingleton<AuthLocalDataSource>(AuthLocalDataSource.new)
+    ..registerLazySingleton<CalendarLocalDataSource>(
+      CalendarLocalDataSource.new,
+    )
     ..registerLazySingleton<UserRepository>(() => UserRepositoryImpl(getIt()))
     ..registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt()))
+    ..registerLazySingleton<CalendarRepository>(
+      () => CalendarRepositoryImpl(getIt()),
+    )
     ..registerLazySingleton<GetCurrentUserUseCase>(
       () => GetCurrentUserUseCase(getIt()),
     )
     ..registerLazySingleton<SignInUseCase>(() => SignInUseCase(getIt()))
     ..registerLazySingleton<SignUpUseCase>(() => SignUpUseCase(getIt()))
-    ..registerFactory<AuthBloc>(() => AuthBloc(getIt(), getIt()));
+    ..registerLazySingleton<GetEventsUseCase>(() => GetEventsUseCase(getIt()))
+    ..registerFactory<AuthBloc>(() => AuthBloc(getIt(), getIt()))
+    ..registerFactory<CalendarBloc>(() => CalendarBloc(getIt()));
 }

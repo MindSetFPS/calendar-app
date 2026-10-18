@@ -1,5 +1,14 @@
 import 'package:calendar/features/user/domain/entities/user.dart';
 
+/// Placeholder for the authentication process.
+///
+/// There is no backend yet, so [signIn] and [signUp] do not contact a server:
+/// they fabricate a [User] from the submitted details so the rest of the flow
+/// (use cases, repository, BLoC, navigation) can be exercised end to end.
+///
+/// TODO(auth): replace the bodies below with real network calls once the API
+/// exists. The signatures and the returned [User] should stay the same so the
+/// layers above do not change.
 class AuthLocalDataSource {
   const AuthLocalDataSource();
 

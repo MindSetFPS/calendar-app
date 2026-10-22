@@ -6,6 +6,11 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:calendar/core/error/failure.dart';
 import 'package:calendar/core/usecase/usecase.dart';
+import 'package:calendar/features/auth/domain/usecases/restore_session_usecase.dart';
+import 'package:calendar/features/auth/domain/usecases/sign_in_usecase.dart';
+import 'package:calendar/features/auth/domain/usecases/sign_out_usecase.dart';
+import 'package:calendar/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:calendar/features/calendar/domain/entities/calendar_event.dart';
 import 'package:calendar/features/calendar/domain/usecases/get_events_usecase.dart';
 import 'package:calendar/features/calendar/presentation/bloc/calendar_bloc.dart';
@@ -14,8 +19,17 @@ import 'package:calendar/features/calendar/presentation/pages/event_details_page
 
 class MockGetEventsUseCase extends Mock implements GetEventsUseCase {}
 
+class MockSignInUseCase extends Mock implements SignInUseCase {}
+
+class MockSignUpUseCase extends Mock implements SignUpUseCase {}
+
+class MockRestoreSessionUseCase extends Mock implements RestoreSessionUseCase {}
+
+class MockSignOutUseCase extends Mock implements SignOutUseCase {}
+
 void main() {
   late MockGetEventsUseCase getEvents;
+  late AuthBloc authBloc;
 
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
@@ -33,16 +47,25 @@ void main() {
 
   setUp(() {
     getEvents = MockGetEventsUseCase();
+    authBloc = AuthBloc(
+      MockSignInUseCase(),
+      MockSignUpUseCase(),
+      MockRestoreSessionUseCase(),
+      MockSignOutUseCase(),
+    );
     registerFallbackValue(const NoParams());
     when(() => getEvents(any()))
         .thenAnswer((_) async => Right<Failure, List<CalendarEvent>>(events));
   });
 
-  Widget wrap() => MaterialApp(
-        home: BlocProvider<CalendarBloc>(
-          create: (_) => CalendarBloc(getEvents),
-          child: const CalendarPage(),
-        ),
+  Widget wrap() => MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>.value(value: authBloc),
+          BlocProvider<CalendarBloc>(
+            create: (_) => CalendarBloc(getEvents),
+          ),
+        ],
+        child: const MaterialApp(home: CalendarPage()),
       );
 
   testWidgets('opens the event details when an event is tapped', (tester) async {

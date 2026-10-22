@@ -10,8 +10,12 @@ abstract interface class AuthRepository {
   });
 
   Future<Either<Failure, User>> signUp({
-    required String name,
     required String email,
     required String password,
   });
+
+  /// Returns the persisted session, or `null` when there is no valid token.
+  Future<Either<Failure, User?>> restoreSession();
+
+  Future<Either<Failure, void>> signOut();
 }

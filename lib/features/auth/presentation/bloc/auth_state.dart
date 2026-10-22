@@ -4,12 +4,18 @@ import 'package:calendar/features/user/domain/entities/user.dart';
 
 enum AuthMode { signIn, signUp }
 
-enum AuthStatus { idle, submitting, success, failure }
+enum AuthStatus {
+  checking,
+  unauthenticated,
+  submitting,
+  authenticated,
+  failure,
+}
 
 class AuthState extends Equatable {
   const AuthState({
     this.mode = AuthMode.signIn,
-    this.status = AuthStatus.idle,
+    this.status = AuthStatus.checking,
     this.obscurePassword = true,
     this.errorMessage,
     this.user,
@@ -27,13 +33,15 @@ class AuthState extends Equatable {
     bool? obscurePassword,
     String? errorMessage,
     User? user,
+    bool clearError = false,
+    bool clearUser = false,
   }) {
     return AuthState(
       mode: mode ?? this.mode,
       status: status ?? this.status,
       obscurePassword: obscurePassword ?? this.obscurePassword,
-      errorMessage: errorMessage ?? this.errorMessage,
-      user: user ?? this.user,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      user: clearUser ? null : (user ?? this.user),
     );
   }
 

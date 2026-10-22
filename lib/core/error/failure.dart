@@ -20,3 +20,16 @@ final class ValidationFailure extends Failure {
 final class UnexpectedFailure extends Failure {
   const UnexpectedFailure([super.message = 'An unexpected error occurred.']);
 }
+
+final class AuthFailure extends Failure {
+  const AuthFailure(super.message, {this.statusCode});
+
+  final int? statusCode;
+
+  @override
+  List<Object?> get props => [message, statusCode];
+}
+
+final class NetworkFailure extends Failure {
+  const NetworkFailure([super.message = 'Could not reach the server.']);
+}

@@ -1,58 +1,18 @@
-import 'package:calendar/features/user/domain/entities/user.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Placeholder for the authentication process.
-///
-/// There is no backend yet, so [signIn] and [signUp] do not contact a server:
-/// they fabricate a [User] from the submitted details so the rest of the flow
-/// (use cases, repository, BLoC, navigation) can be exercised end to end.
-///
-/// TODO(auth): replace the bodies below with real network calls once the API
-/// exists. The signatures and the returned [User] should stay the same so the
-/// layers above do not change.
+/// Persists the access token in the platform's secure storage.
 class AuthLocalDataSource {
-  const AuthLocalDataSource();
+  AuthLocalDataSource({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
 
-  User signIn({required String email, required String password}) => _userFrom(
-        email: email,
-        name: _nameFromEmail(email),
-        bio: 'Signed in to Pulse.',
-      );
+  static const String _tokenKey = 'auth_access_token';
 
-  User signUp({
-    required String name,
-    required String email,
-    required String password,
-  }) =>
-      _userFrom(email: email, name: name, bio: 'New to Pulse.');
+  final FlutterSecureStorage _storage;
 
-  User _userFrom({
-    required String email,
-    required String name,
-    required String bio,
-  }) =>
-      User(
-        id: email,
-        name: name,
-        handle: _handleFromEmail(email),
-        bio: bio,
-      );
+  Future<String?> readToken() => _storage.read(key: _tokenKey);
 
-  String _handleFromEmail(String email) {
-    final local = email.split('@').first;
-    final sanitized = local.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '');
-    return sanitized.isEmpty ? 'pulseuser' : sanitized;
-  }
+  Future<void> saveToken(String token) =>
+      _storage.write(key: _tokenKey, value: token);
 
-  String _nameFromEmail(String email) {
-    final parts = email
-        .split('@')
-        .first
-        .split(RegExp(r'[._\-]+'))
-        .where((part) => part.isNotEmpty)
-        .toList();
-    if (parts.isEmpty) return 'Pulse User';
-    return parts
-        .map((part) => part[0].toUpperCase() + part.substring(1))
-        .join(' ');
-  }
+  Future<void> clearToken() => _storage.delete(key: _tokenKey);
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:calendar/core/routing/app_routes.dart';
+import 'package:calendar/features/auth/domain/auth_validation.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_event.dart';
 import 'package:calendar/features/auth/presentation/bloc/auth_state.dart';
@@ -14,32 +14,62 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  bool _emailBlurred = false;
+  bool _passwordBlurred = false;
+  bool _submitAttempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocus.addListener(_onEmailFocusChanged);
+    _passwordFocus.addListener(_onPasswordFocusChanged);
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  void _onEmailFocusChanged() {
+    if (!mounted || _emailFocus.hasFocus || _emailBlurred) return;
+    setState(() => _emailBlurred = true);
+  }
+
+  void _onPasswordFocusChanged() {
+    if (!mounted || _passwordFocus.hasFocus || _passwordBlurred) return;
+    setState(() => _passwordBlurred = true);
+  }
+
   String get _email => _emailController.text.trim();
 
   bool _canSubmit(AuthMode mode) {
-    final hasEmail = _email.contains('@') && _email.length >= 3;
-    final hasPassword = _passwordController.text.length >= 6;
-    final hasName = mode == AuthMode.signIn || _nameController.text.trim().isNotEmpty;
-    return hasEmail && hasPassword && hasName;
+    final password = _passwordController.text;
+    final passwordError = mode == AuthMode.signIn
+        ? signInPasswordError(password)
+        : signUpPasswordError(password);
+    return emailValidationError(_email) == null && passwordError == null;
   }
 
-  void _submit() {
+  void _submit(AuthMode mode) {
     FocusScope.of(context).unfocus();
+    setState(() {
+      _submitAttempted = true;
+      _emailBlurred = true;
+      _passwordBlurred = true;
+    });
+
+    if (!_canSubmit(mode)) return;
+
     context.read<AuthBloc>().add(
           AuthSubmitted(
-            name: _nameController.text,
             email: _email,
             password: _passwordController.text,
           ),
@@ -51,17 +81,10 @@ class _AuthPageState extends State<AuthPage> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return BlocConsumer<AuthBloc, AuthState>(
-      listenWhen: (previous, next) =>
-          next.status == AuthStatus.success &&
-          previous.status != AuthStatus.success,
-      listener: (context, state) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-      },
+    return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isSignUp = state.mode == AuthMode.signUp;
         final isSubmitting = state.status == AuthStatus.submitting;
-        final canSubmit = _canSubmit(state.mode) && !isSubmitting;
 
         return Scaffold(
           body: SafeArea(
@@ -103,52 +126,52 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                         ],
                         selected: {state.mode},
-                        onSelectionChanged: (selection) =>
-                            context.read<AuthBloc>().add(
-                                  AuthModeChanged(selection.first),
-                                ),
+                        onSelectionChanged: (selection) {
+                          setState(() {
+                            _emailBlurred = false;
+                            _passwordBlurred = false;
+                            _submitAttempted = false;
+                          });
+                          context.read<AuthBloc>().add(
+                                AuthModeChanged(selection.first),
+                              );
+                        },
                       ),
                       const SizedBox(height: 20),
-                      if (isSignUp) ...[
-                        TextField(
-                          controller: _nameController,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(
-                            labelText: 'Full name',
-                            prefixIcon: Icon(Icons.person_outline),
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
                       TextField(
                         controller: _emailController,
+                        focusNode: _emailFocus,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Email',
-                          prefixIcon: Icon(Icons.mail_outline),
-                          border: OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.mail_outline),
+                          border: const OutlineInputBorder(),
+                          errorText: _emailBlurred || _submitAttempted
+                              ? emailValidationError(_email)
+                              : null,
+                          errorMaxLines: 2,
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
+                        focusNode: _passwordFocus,
                         obscureText: state.obscurePassword,
                         textInputAction: TextInputAction.done,
                         onChanged: (_) => setState(() {}),
-                        onSubmitted: (_) {
-                          if (canSubmit) _submit();
-                        },
+                        onSubmitted: (_) => _submit(state.mode),
                         decoration: InputDecoration(
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: const OutlineInputBorder(),
-                          helperText: isSignUp ? 'At least 6 characters' : null,
+                          errorText: !isSignUp &&
+                                  (_passwordBlurred || _submitAttempted)
+                              ? signInPasswordError(_passwordController.text)
+                              : null,
+                          errorMaxLines: 2,
                           suffixIcon: IconButton(
                             onPressed: () => context.read<AuthBloc>().add(
                                   const AuthPasswordVisibilityToggled(),
@@ -161,7 +184,15 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                         ),
                       ),
-                      if (!isSignUp)
+                      if (isSignUp)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: _PasswordRequirements(
+                            password: _passwordController.text,
+                            showError: _submitAttempted,
+                          ),
+                        )
+                      else
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -174,11 +205,8 @@ class _AuthPageState extends State<AuthPage> {
                             ),
                             child: const Text('Forgot password?'),
                           ),
-                        )
-                      else
-                        const SizedBox(height: 16),
-                      if (state.status == AuthStatus.failure &&
-                          state.errorMessage != null)
+                        ),
+                      if (state.errorMessage != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Text(
@@ -190,7 +218,9 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                       const SizedBox(height: 8),
                       FilledButton(
-                        onPressed: canSubmit ? _submit : null,
+                        onPressed: isSubmitting
+                            ? null
+                            : () => _submit(state.mode),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -210,6 +240,60 @@ class _AuthPageState extends State<AuthPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _PasswordRequirements extends StatelessWidget {
+  const _PasswordRequirements({
+    required this.password,
+    required this.showError,
+  });
+
+  final String password;
+  final bool showError;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final requirements = passwordRequirements(password);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final requirement in requirements)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Icon(
+                  requirement.met
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  size: 16,
+                  color: requirement.met
+                      ? theme.colorScheme.primary
+                      : showError
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    requirement.label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: requirement.met
+                          ? theme.colorScheme.primary
+                          : showError
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

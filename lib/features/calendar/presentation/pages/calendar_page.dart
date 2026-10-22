@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:calendar/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:calendar/features/auth/presentation/bloc/auth_event.dart';
+import 'package:calendar/features/auth/presentation/bloc/auth_state.dart';
 import 'package:calendar/features/calendar/domain/entities/calendar_event.dart';
 import 'package:calendar/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:calendar/features/calendar/presentation/bloc/calendar_event.dart';
@@ -9,6 +12,7 @@ import 'package:calendar/features/calendar/presentation/calendar_format.dart';
 import 'package:calendar/features/calendar/presentation/pages/event_details_page.dart';
 import 'package:calendar/features/calendar/presentation/widgets/event_list_tile.dart';
 import 'package:calendar/features/calendar/presentation/widgets/month_grid.dart';
+import 'package:calendar/features/user/presentation/widgets/avatar.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -33,7 +37,34 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pulse')),
+      appBar: AppBar(
+        title: const Text('Pulse'),
+        actions: [
+          BlocBuilder<AuthBloc, AuthState>(
+            buildWhen: (previous, current) => previous.user != current.user,
+            builder: (context, state) {
+              final user = state.user;
+              return PopupMenuButton<String>(
+                tooltip: 'Account',
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    context.read<AuthBloc>().add(const AuthLogoutRequested());
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'logout', child: Text('Log out')),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: user == null
+                      ? const Icon(Icons.account_circle_outlined)
+                      : Avatar(user: user, radius: 16),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocBuilder<CalendarBloc, CalendarState>(
         builder: (context, state) {
           switch (state.status) {

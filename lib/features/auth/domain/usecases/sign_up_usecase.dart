@@ -2,10 +2,11 @@ import 'package:fpdart/fpdart.dart';
 
 import 'package:calendar/core/error/failure.dart';
 import 'package:calendar/core/usecase/usecase.dart';
+import 'package:calendar/features/auth/domain/auth_validation.dart';
 import 'package:calendar/features/auth/domain/repositories/auth_repository.dart';
 import 'package:calendar/features/user/domain/entities/user.dart';
 
-typedef SignUpParams = ({String name, String email, String password});
+typedef SignUpParams = ({String email, String password});
 
 class SignUpUseCase implements UseCase<User, SignUpParams> {
   const SignUpUseCase(this._repository);
@@ -14,31 +15,15 @@ class SignUpUseCase implements UseCase<User, SignUpParams> {
 
   @override
   Future<Either<Failure, User>> call(SignUpParams params) {
-    final name = params.name.trim();
-    if (name.isEmpty) {
-      return Future.value(
-        const Left<Failure, User>(ValidationFailure('Enter your name.')),
-      );
-    }
     final email = params.email.trim();
-    if (email.length < 3 || !email.contains('@')) {
-      return Future.value(
-        const Left<Failure, User>(
-          ValidationFailure('Enter a valid email address.'),
-        ),
-      );
+    final emailError = emailValidationError(email);
+    if (emailError != null) {
+      return Future.value(Left<Failure, User>(ValidationFailure(emailError)));
     }
-    if (params.password.length < 6) {
-      return Future.value(
-        const Left<Failure, User>(
-          ValidationFailure('Password must be at least 6 characters.'),
-        ),
-      );
+    final passwordError = signUpPasswordError(params.password);
+    if (passwordError != null) {
+      return Future.value(Left<Failure, User>(ValidationFailure(passwordError)));
     }
-    return _repository.signUp(
-      name: name,
-      email: email,
-      password: params.password,
-    );
+    return _repository.signUp(email: email, password: params.password);
   }
 }

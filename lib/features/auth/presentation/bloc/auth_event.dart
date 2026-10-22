@@ -4,6 +4,10 @@ sealed class AuthEvent {
   const AuthEvent();
 }
 
+final class AuthSessionRequested extends AuthEvent {
+  const AuthSessionRequested();
+}
+
 final class AuthModeChanged extends AuthEvent {
   const AuthModeChanged(this.mode);
 
@@ -15,13 +19,12 @@ final class AuthPasswordVisibilityToggled extends AuthEvent {
 }
 
 final class AuthSubmitted extends AuthEvent {
-  const AuthSubmitted({
-    required this.name,
-    required this.email,
-    required this.password,
-  });
+  const AuthSubmitted({required this.email, required this.password});
 
-  final String name;
   final String email;
   final String password;
+}
+
+final class AuthLogoutRequested extends AuthEvent {
+  const AuthLogoutRequested();
 }
